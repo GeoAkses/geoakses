@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GeoAkses</string>
+    <string name="app_tagline">Smart Mobility for Greater Bandung &amp; West Java</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_map">Map</string>
+    <string name="nav_routes">Routes</string>
+    <string name="nav_stops">Stops</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Splash & Onboarding -->
+    <string name="splash_welcome">Welcome to GeoAkses</string>
+    <string name="onboarding_title_1">Explore Bandung Transit</string>
+    <string name="onboarding_desc_1">Track Trans Metro Bandung (TMB), Metro Jabar Trans (MJT), and public shuttles in real-time.</string>
+    <string name="onboarding_title_2">Live Bus Tracking</string>
+    <string name="onboarding_desc_2">Interactive map powered by OpenStreetMap makes tracking buses in every corridor effortless.</string>
+    <string name="onboarding_title_3">Find Nearby Stops</string>
+    <string name="onboarding_desc_3">Discover closest shelters and bus stops with estimated time of arrivals.</string>
+    <string name="btn_next">Next</string>
+    <string name="btn_skip">Skip</string>
+    <string name="btn_start">Get Started</string>
+
+    <!-- Home Screen -->
+    <string name="home_greeting">Hello, Bandung Traveler!</string>
+    <string name="home_subgreeting">Where would you like to travel today?</string>
+    <string name="home_search_hint">Search corridors, routes, or stops...</string>
+    <string name="home_active_corridors">Active Corridors</string>
+    <string name="home_nearby_stops">Nearby Stops</string>
+    <string name="home_live_buses">Buses in Service</string>
+    <string name="home_quick_actions">Quick Access</string>
+    <string name="home_action_track">Track Bus</string>
+    <string name="home_action_schedule">Schedule</string>
+    <string name="home_action_tariff">Fares</string>
+    <string name="home_action_guide">User Guide</string>
+    <string name="view_all">View All</string>
+
+    <!-- Map Screen -->
+    <string name="map_title">Transit Map</string>
+    <string name="map_filter_corridors">Select Corridor</string>
+    <string name="map_my_location">My Location</string>
+    <string name="map_bus_speed">Speed: %1$d km/h</string>
+    <string name="map_next_stop">Next Stop: %1$s</string>
+    <string name="map_eta">Estimated Arrival: %1$d min</string>
+
+    <!-- Route Screen -->
+    <string name="route_title">Routes &amp; Corridors</string>
+    <string name="route_detail_title">Corridor Details</string>
+    <string name="route_stops_count">%1$d Stops</string>
+    <string name="route_operating_hours">Hours: %1$s - %2$s WIB</string>
+    <string name="route_fare">Fare: IDR %1$s</string>
+    <string name="route_search_placeholder">Search TMB/MJT corridors...</string>
+    <string name="route_stops_tab">Stop List</string>
+    <string name="route_buses_tab">Active Buses</string>
+    <string name="route_schedule_tab">Schedule</string>
+
+    <!-- Stop Screen -->
+    <string name="stop_title">Bus Stops</string>
+    <string name="stop_detail_title">Stop Details</string>
+    <string name="stop_distance">%1$.1f km from your location</string>
+    <string name="stop_served_corridors">Served corridors</string>
+    <string name="stop_search_placeholder">Search stop name or street...</string>
+
+    <!-- Profile Screen -->
+    <string name="profile_title">Profile &amp; Settings</string>
+    <string name="profile_account">User Account</string>
+    <string name="profile_guest">Guest User</string>
+    <string name="profile_theme">App Theme</string>
+    <string name="profile_theme_system">System Default</string>
+    <string name="profile_theme_light">Light</string>
+    <string name="profile_theme_dark">Dark</string>
+    <string name="profile_language">Language / Bahasa</string>
+    <string name="profile_language_desc">English (EN)</string>
+    <string name="profile_about">About GeoAkses</string>
+    <string name="profile_version">Version 1.0.0 (Native Android)</string>
+    <string name="profile_partner">Supported by Bandung Department of Transportation &amp; Jabar Trans</string>
+
+    <!-- Common & Alerts -->
+    <string name="loading">Loading data...</string>
+    <string name="error_network">Failed to connect to network</string>
+    <string name="empty_data">No data found</string>
+    <string name="permission_location_rationale">GeoAkses requires location permission to show nearby stops and your position on the map.</string>
+    <string name="permission_grant">Grant Location Permission</string>
+</resources>

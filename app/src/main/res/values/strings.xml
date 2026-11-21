@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GeoAkses</string>
+    <string name="app_tagline">Mobilitas Cerdas Bandung Raya &amp; Jawa Barat</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Beranda</string>
+    <string name="nav_map">Peta</string>
+    <string name="nav_routes">Rute</string>
+    <string name="nav_stops">Halte</string>
+    <string name="nav_profile">Profil</string>
+
+    <!-- Splash & Onboarding -->
+    <string name="splash_welcome">Selamat Datang di GeoAkses</string>
+    <string name="onboarding_title_1">Jelajahi Angkutan Bandung</string>
+    <string name="onboarding_desc_1">Pantau Trans Metro Bandung (TMB), Metro Jabar Trans (MJT), dan angkutan kota secara real-time.</string>
+    <string name="onboarding_title_2">Lacak Posisi Bus Langsung</string>
+    <string name="onboarding_desc_2">Peta interaktif berbasis OpenStreetMap memudahkan Anda mengetahui keberadaan bus di setiap koridor.</string>
+    <string name="onboarding_title_3">Temukan Halte Terdekat</string>
+    <string name="onboarding_desc_3">Cari halte dan shelter terdekat dari posisi Anda lengkap dengan perkiraan waktu kedatangan.</string>
+    <string name="btn_next">Lanjut</string>
+    <string name="btn_skip">Lewati</string>
+    <string name="btn_start">Mulai Sekarang</string>
+
+    <!-- Home Screen -->
+    <string name="home_greeting">Halo, Wargi Bandung!</string>
+    <string name="home_subgreeting">Mau bepergian ke mana hari ini?</string>
+    <string name="home_search_hint">Cari koridor, rute, atau halte...</string>
+    <string name="home_active_corridors">Koridor Aktif</string>
+    <string name="home_nearby_stops">Halte Terdekat Anda</string>
+    <string name="home_live_buses">Bus Sedang Beroperasi</string>
+    <string name="home_quick_actions">Akses Cepat</string>
+    <string name="home_action_track">Lacak Bus</string>
+    <string name="home_action_schedule">Jadwal</string>
+    <string name="home_action_tariff">Tarif</string>
+    <string name="home_action_guide">Panduan</string>
+    <string name="view_all">Lihat Semua</string>
+
+    <!-- Map Screen -->
+    <string name="map_title">Peta Transportasi</string>
+    <string name="map_filter_corridors">Pilih Koridor</string>
+    <string name="map_my_location">Lokasi Saya</string>
+    <string name="map_bus_speed">Kecepatan: %1$d km/jam</string>
+    <string name="map_next_stop">Menuju Halte: %1$s</string>
+    <string name="map_eta">Estimasi Tiba: %1$d menit</string>
+
+    <!-- Route Screen -->
+    <string name="route_title">Daftar Rute &amp; Koridor</string>
+    <string name="route_detail_title">Detail Koridor</string>
+    <string name="route_stops_count">%1$d Halte</string>
+    <string name="route_operating_hours">Jam Operasional: %1$s - %2$s WIB</string>
+    <string name="route_fare">Tarif: Rp %1$s</string>
+    <string name="route_search_placeholder">Cari koridor TMB/MJT...</string>
+    <string name="route_stops_tab">Daftar Halte</string>
+    <string name="route_buses_tab">Bus Aktif</string>
+    <string name="route_schedule_tab">Jadwal</string>
+
+    <!-- Stop Screen -->
+    <string name="stop_title">Daftar Halte</string>
+    <string name="stop_detail_title">Detail Halte</string>
+    <string name="stop_distance">%1$.1f km dari lokasi Anda</string>
+    <string name="stop_served_corridors">Koridor yang melintas</string>
+    <string name="stop_search_placeholder">Cari nama halte atau jalan...</string>
+
+    <!-- Profile Screen -->
+    <string name="profile_title">Profil &amp; Pengaturan</string>
+    <string name="profile_account">Akun Pengguna</string>
+    <string name="profile_guest">Pengguna Tamu</string>
+    <string name="profile_theme">Tema Aplikasi</string>
+    <string name="profile_theme_system">Ikuti Sistem</string>
+    <string name="profile_theme_light">Terang</string>
+    <string name="profile_theme_dark">Gelap</string>
+    <string name="profile_language">Bahasa / Language</string>
+    <string name="profile_language_desc">Bahasa Indonesia (ID)</string>
+    <string name="profile_about">Tentang GeoAkses</string>
+    <string name="profile_version">Versi 1.0.0 (Native Android)</string>
+    <string name="profile_partner">Didukung oleh Dinas Perhubungan Bandung &amp; Jabar Trans</string>
+
+    <!-- Common & Alerts -->
+    <string name="loading">Memuat data...</string>
+    <string name="error_network">Gagal terhubung ke jaringan</string>
+    <string name="empty_data">Tidak ada data ditemukan</string>
+    <string name="permission_location_rationale">GeoAkses membutuhkan izin lokasi untuk menampilkan halte terdekat dan posisi Anda di peta.</string>
+    <string name="permission_grant">Izinkan Lokasi</string>
+</resources>
