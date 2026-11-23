@@ -51,7 +51,9 @@ class TransitRepository @Inject constructor(
     suspend fun getRouteById(id: String): Route? {
         val cached = routeDao.getRouteById(id)
             ?: Constants.SOURCED_ROUTES.find { it.id == id }
-        if (cached != null) return cached
+        val cachedStops = cached?.let { stopDao.getStopsByCorridor(it.code).first() }.orEmpty()
+        // Cached route data must remain usable when the API is unreachable (for example on a phone).
+        if (cached != null) return cached.copy(stops = cachedStops)
         return try {
             val remote = apiService.getRouteById(id)
             routeDao.insertRoutes(listOf(remote.copy(stops = emptyList())))
@@ -82,14 +84,14 @@ class TransitRepository @Inject constructor(
     suspend fun getStopById(id: String): Stop? = stopDao.getStopById(id)
 
     fun getStopsByRoute(routeId: String): Flow<List<Stop>> = flow {
-        val route = getRouteById(routeId)
-        if (route?.stops?.isNotEmpty() == true) stopDao.insertStops(route.stops)
+        val route = routeDao.getRouteById(routeId)
+            ?: Constants.SOURCED_ROUTES.find { it.id == routeId }
         emitAll(stopDao.getStopsByCorridor(route?.code ?: routeId))
     }
 
     fun getNearbyStops(
-        latitude: Double = Constants.BANDUNG_LATITUDE,
-        longitude: Double = Constants.BANDUNG_LONGITUDE,
+        latitude: Double,
+        longitude: Double,
         radiusKm: Double = 5.0
     ): Flow<List<Stop>> = getStops().map { result ->
         result.getOrDefault(emptyList())

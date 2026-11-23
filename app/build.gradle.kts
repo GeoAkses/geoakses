@@ -34,6 +34,16 @@ android {
         !releaseStorePassword.isNullOrBlank() &&
         !releaseKeyAlias.isNullOrBlank() &&
         !releaseKeyPassword.isNullOrBlank()
+    val apiBaseUrlOverride = providers.gradleProperty("geoaksesApiBaseUrl").orNull
+        ?: providers.environmentVariable("GEOAKSES_API_BASE_URL").orNull
+
+    fun apiBaseUrlField(value: String, allowHttp: Boolean): String {
+        require(value.endsWith("/")) { "GeoAkses API base URL must end with /" }
+        require(value.startsWith("https://") || (allowHttp && value.startsWith("http://"))) {
+            "GeoAkses API base URL must use HTTPS outside debug builds"
+        }
+        return "\"$value\""
+    }
 
     signingConfigs {
         create("release") {
@@ -45,7 +55,21 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField(
+                "String",
+                "API_BASE_URL",
+                apiBaseUrlField(apiBaseUrlOverride ?: "http://10.0.2.2:8080/api/v1/", allowHttp = true)
+            )
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
         release {
+            buildConfigField(
+                "String",
+                "API_BASE_URL",
+                apiBaseUrlField(apiBaseUrlOverride ?: "https://api.geoakses.invalid/api/v1/", allowHttp = false)
+            )
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

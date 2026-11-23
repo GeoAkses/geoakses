@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
@@ -28,7 +29,13 @@ import com.geoakses.app.data.model.Bus
 import com.geoakses.app.data.model.OccupancyStatus
 import com.geoakses.app.data.model.Route
 import com.geoakses.app.data.model.Stop
+import com.geoakses.app.ui.component.GeoAksesLoadingState
+import com.geoakses.app.ui.component.GeoAksesSearchBar
+import com.geoakses.app.ui.component.GeoAksesSectionHeader
 import com.geoakses.app.ui.viewmodel.HomeViewModel
+import com.geoakses.app.ui.theme.SemanticErrorContent
+import com.geoakses.app.ui.theme.SemanticSuccess
+import com.geoakses.app.ui.theme.SemanticWarningContent
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -39,7 +46,8 @@ fun HomeScreen(
     onViewAllStops: () -> Unit,
     onOpenMap: () -> Unit,
     onOpenFares: () -> Unit,
-    onOpenGuide: () -> Unit,
+    onOpenProfile: () -> Unit,
+    onOpenSearch: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -55,102 +63,62 @@ fun HomeScreen(
             .background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
-        // Header
+        // Brand header and global search
         item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.primary)
-                    .padding(16.dp)
-                    .padding(top = 16.dp)
-            ) {
-                Column {
-                    Text(
-                        "Halo, Wargi Bandung",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        "Mau bepergian ke mana hari ini?",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.85f)
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = uiState.searchQuery,
-                        onValueChange = viewModel::onSearchQueryChange,
-                        placeholder = { Text("Cari koridor, rute, atau halte...", color = Color.White.copy(alpha = 0.7f)) },
-                        leadingIcon = { Icon(Icons.Filled.Search, null, tint = Color.White) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.5f),
-                            focusedBorderColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedTextColor = Color.White,
-                            cursorColor = Color.White
-                        ),
-                        singleLine = true
-                    )
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.DirectionsTransit, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(26.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text("GeoAkses", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text("Bandung Raya", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
+                Spacer(Modifier.height(14.dp))
+                GeoAksesSearchBar(
+                    value = "",
+                    onValueChange = {},
+                    placeholder = "Cari halte, rute, atau lokasi...",
+                    readOnly = true,
+                    onClick = onOpenSearch
+                )
             }
         }
 
-        if (uiState.searchQuery.isNotBlank()) {
-            val query = uiState.searchQuery.trim()
-            val matchingRoutes = uiState.routes.filter {
-                it.name.contains(query, true) || it.code.contains(query, true) || it.operator.contains(query, true)
-            }.take(3)
-            val matchingStops = uiState.stops.filter {
-                it.name.contains(query, true) || it.address.contains(query, true) || it.corridorsServed.contains(query, true)
-            }.take(3)
-            item {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text("Hasil pencarian", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    matchingRoutes.forEach { route ->
-                        TextButton(onClick = { onRouteClick(route.id) }) {
-                        Text("${route.code} - ${route.name}", maxLines = 1)
-                        }
-                    }
-                    matchingStops.forEach { stop ->
-                        TextButton(onClick = { onStopClick(stop.id) }) {
-                            Text(stop.name, maxLines = 1)
-                        }
-                    }
-                    if (matchingRoutes.isEmpty() && matchingStops.isEmpty()) {
-                        Text("Tidak ada rute atau halte yang cocok.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-        }
+        item { HomeHeroCard(onExplore = onOpenMap) }
 
         // Quick Actions
         item {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Akses Cepat", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    QuickActionItem(Icons.Filled.DirectionsBus, "Lacak Bus", MaterialTheme.colorScheme.primary, onOpenMap)
-                    QuickActionItem(Icons.Filled.Schedule, "Jadwal", MaterialTheme.colorScheme.secondary) { onViewAllRoutes() }
-                    QuickActionItem(Icons.Filled.AttachMoney, "Tarif", Color(0xFF2D785C), onOpenFares)
-                    QuickActionItem(Icons.Filled.Info, "Panduan", MaterialTheme.colorScheme.tertiary, onOpenGuide)
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        QuickActionItem(Icons.Filled.Map, "Peta", MaterialTheme.colorScheme.primary, onOpenMap, Modifier.weight(1f))
+                        QuickActionItem(Icons.Filled.DirectionsBus, "Rute", MaterialTheme.colorScheme.primary, onViewAllRoutes, Modifier.weight(1f))
+                        QuickActionItem(Icons.Filled.Place, "Halte", MaterialTheme.colorScheme.secondary, onViewAllStops, Modifier.weight(1f))
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        QuickActionItem(Icons.Filled.AttachMoney, "Tarif", SemanticSuccess, onOpenFares, Modifier.weight(1f))
+                        QuickActionItem(Icons.Filled.Schedule, "Jadwal", MaterialTheme.colorScheme.secondary, onViewAllRoutes, Modifier.weight(1f))
+                        QuickActionItem(Icons.Filled.Settings, "Pengaturan", MaterialTheme.colorScheme.onSurfaceVariant, onOpenProfile, Modifier.weight(1f))
+                    }
                 }
             }
         }
 
         // Active Corridors
         item {
-            SectionHeader("Koridor Aktif", onViewAllRoutes)
+            GeoAksesSectionHeader("Koridor Aktif", actionLabel = "Lihat Semua", onAction = onViewAllRoutes)
         }
         item {
             if (uiState.isLoading) {
-                Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+                GeoAksesLoadingState(modifier = Modifier.height(120.dp))
             } else {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -164,7 +132,7 @@ fun HomeScreen(
         }
 
         // Live Buses
-        item { SectionHeader("Bus Sedang Beroperasi") }
+        item { GeoAksesSectionHeader("Bus Sedang Beroperasi") }
         if (uiState.liveBuses.isEmpty()) {
             item { Text("Feed posisi bus belum terhubung; GeoAkses tidak menampilkan lokasi simulasi.", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         } else {
@@ -186,7 +154,7 @@ fun HomeScreen(
                 }
                 TextButton(onClick = {
                     if (!hasLocationPermission) {
-                        locationPermission.launchPermissionRequest()
+                        locationPermission.launchMultiplePermissionRequest()
                     } else {
                         try {
                             LocationServices.getFusedLocationProviderClient(context).lastLocation
@@ -218,7 +186,20 @@ fun HomeScreen(
             NearbyStopItem(stop = stop, onClick = { onStopClick(stop.id) }, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         }
         if (uiState.nearbyStops.isEmpty()) {
-            item { Text("Data halte dengan koordinat terverifikasi belum tersedia.", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            val message = when {
+                uiState.latitude == null && !hasLocationPermission -> "Aktifkan lokasi untuk melihat halte terdekat, atau cari halte secara manual."
+                uiState.latitude == null -> "Tekan ‘Perbarui lokasi’ untuk mencari halte di sekitar Anda."
+                uiState.stops.isEmpty() -> "Data halte dengan koordinat terverifikasi belum tersedia."
+                else -> "Tidak ada halte terverifikasi dalam jangkauan pencarian."
+            }
+            item {
+                Text(
+                    message,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -228,11 +209,15 @@ private fun QuickActionItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     color: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = modifier
+            .heightIn(min = 88.dp)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(vertical = 4.dp)
     ) {
         Box(
             modifier = Modifier
@@ -249,15 +234,38 @@ private fun QuickActionItem(
 }
 
 @Composable
-private fun SectionHeader(title: String, onViewAll: (() -> Unit)? = null) {
-    Row(
+private fun HomeHeroCard(onExplore: () -> Unit) {
+    Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        if (onViewAll != null) {
-            TextButton(onClick = onViewAll) { Text("Lihat Semua") }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Transportasi Bandung Lebih Mudah", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Jelajahi informasi rute dan halte yang tersedia.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Spacer(Modifier.height(8.dp))
+                TextButton(onClick = onExplore) {
+                    Text("Jelajahi peta", color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+            Icon(
+                Icons.Filled.DirectionsTransit,
+                contentDescription = "Transportasi publik",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(48.dp)
+            )
         }
     }
 }
@@ -304,9 +312,9 @@ private fun RouteCard(route: Route, onClick: () -> Unit) {
 @Composable
 private fun LiveBusItem(bus: Bus, modifier: Modifier = Modifier) {
     val occupancyColor = when (bus.occupancy) {
-        OccupancyStatus.EMPTY, OccupancyStatus.SEATS_AVAILABLE -> Color(0xFF2E7D32)
-        OccupancyStatus.STANDING_ONLY -> Color(0xFFF57C00)
-        OccupancyStatus.FULL -> Color(0xFFD32F2F)
+        OccupancyStatus.EMPTY, OccupancyStatus.SEATS_AVAILABLE -> SemanticSuccess
+        OccupancyStatus.STANDING_ONLY -> SemanticWarningContent
+        OccupancyStatus.FULL -> SemanticErrorContent
         OccupancyStatus.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     val occupancyText = when (bus.occupancy) {

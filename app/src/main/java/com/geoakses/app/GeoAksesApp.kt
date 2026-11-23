@@ -22,7 +22,7 @@ class GeoAksesApp : Application() {
             val tileCache = File(cacheDir, "osmdroid").apply { mkdirs() }
             osmdroidBasePath = tileCache
             osmdroidTileCache = File(tileCache, "tiles").apply { mkdirs() }
-            userAgentValue = packageName
+            userAgentValue = "GeoAkses/${BuildConfig.VERSION_NAME} (Android; https://github.com/GeoAkses/geoakses)"
         }
     }
 }

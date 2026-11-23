@@ -58,7 +58,10 @@ data class Route(
 
     @SerializedName("source")
     @ColumnInfo(defaultValue = "'GeoAkses demo'")
-    val source: String = ""
+    val source: String = "",
+
+    @SerializedName("verified_at")
+    val verifiedAt: String? = null
 ) {
     constructor(
         id: String,
@@ -75,9 +78,10 @@ data class Route(
         isActive: Boolean,
         description: String,
         dataStatus: String,
-        source: String
+        source: String,
+        verifiedAt: String?
     ) : this(
         id, code, name, origin, destination, operator, fare, operatingHours,
-        headwayMinutes, colorHex, stopsCount, isActive, description, emptyList(), dataStatus, source
+        headwayMinutes, colorHex, stopsCount, isActive, description, emptyList(), dataStatus, source, verifiedAt
     )
 }

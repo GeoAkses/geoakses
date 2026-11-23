@@ -1,5 +1,7 @@
 package com.geoakses.app.ui.screen.map
 
+import android.Manifest
+import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -8,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.geoakses.app.data.model.Bus
+import com.geoakses.app.data.model.Stop
 import com.geoakses.app.ui.viewmodel.MapViewModel
 import com.geoakses.app.util.Constants
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -26,27 +30,74 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.Marker
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.shape.CircleShape
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.android.gms.location.LocationServices
+import java.lang.SecurityException
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MapScreen(viewModel: MapViewModel = hiltViewModel()) {
+fun MapScreen(
+    onStopClick: (String) -> Unit,
+    onBack: (() -> Unit)? = null,
+    viewModel: MapViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
     val mapReference = remember { mutableStateOf<MapView?>(null) }
+    var locationError by remember { mutableStateOf<String?>(null) }
+    val locationPermission = rememberMultiplePermissionsState(
+        listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+    )
+    val hasLocationPermission = locationPermission.permissions.any { it.status.isGranted }
 
-    DisposableEffect(lifecycleOwner, mapReference.value) {
-        val mapView = mapReference.value
+    fun loadDeviceLocation() {
+        try {
+            LocationServices.getFusedLocationProviderClient(context).lastLocation
+                .addOnSuccessListener { location ->
+                    if (location != null) {
+                        locationError = null
+                        viewModel.updateUserLocation(location.latitude, location.longitude)
+                    } else {
+                        locationError = "Lokasi belum tersedia. Pastikan GPS aktif lalu coba lagi."
+                    }
+                }
+                .addOnFailureListener {
+                    locationError = "Lokasi perangkat tidak dapat dibaca. Coba lagi."
+                }
+        } catch (_: SecurityException) {
+            locationError = "Izin lokasi belum diberikan."
+        }
+    }
+
+    LaunchedEffect(hasLocationPermission) {
+        if (hasLocationPermission) loadDeviceLocation()
+    }
+
+    LaunchedEffect(uiState.userLatitude, uiState.userLongitude) {
+        val latitude = uiState.userLatitude
+        val longitude = uiState.userLongitude
+        if (latitude != null && longitude != null) {
+            mapReference.value?.controller?.setZoom(16.0)
+            mapReference.value?.controller?.setCenter(GeoPoint(latitude, longitude))
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_RESUME -> mapView?.onResume()
-                Lifecycle.Event.ON_PAUSE -> mapView?.onPause()
+                Lifecycle.Event.ON_RESUME -> mapReference.value?.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapReference.value?.onPause()
                 else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            mapView?.onPause()
-            mapView?.onDetach()
         }
     }
 
@@ -65,15 +116,23 @@ fun MapScreen(viewModel: MapViewModel = hiltViewModel()) {
                 mapView.overlays.clear()
                 val selectedRoute = uiState.routes.firstOrNull { it.id == uiState.selectedRouteId }
 
+                val operatorRoutes = uiState.routes.filter { route -> route.operator.equals(uiState.selectedLayer, ignoreCase = true) }
                 if (uiState.showStops) {
                     uiState.stops.filter { stop ->
-                        selectedRoute == null || stop.corridorsServed.contains(selectedRoute.code, ignoreCase = true)
+                        val routeMatches = selectedRoute == null || stop.corridorsServed.contains(selectedRoute.code, ignoreCase = true)
+                        val operatorMatches = uiState.selectedLayer !in listOf("TMB", "MJT") ||
+                            operatorRoutes.any { stop.corridorsServed.contains(it.code, ignoreCase = true) }
+                        stop.isActive && stop.latitude in -90.0..90.0 && stop.longitude in -180.0..180.0 && routeMatches && operatorMatches
                     }.forEach { stop ->
                         val marker = Marker(mapView).apply {
                             position = GeoPoint(stop.latitude, stop.longitude)
                             title = stop.name
                             snippet = stop.corridorsServed
                             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                            setOnMarkerClickListener { _, _ ->
+                                viewModel.selectStop(stop)
+                                true
+                            }
                         }
                         mapView.overlays.add(marker)
                     }
@@ -81,7 +140,10 @@ fun MapScreen(viewModel: MapViewModel = hiltViewModel()) {
 
                 if (uiState.showBuses) {
                     uiState.liveBuses.filter { bus ->
-                        selectedRoute == null || bus.routeId == selectedRoute.id
+                        val routeMatches = selectedRoute == null || bus.routeId == selectedRoute.id
+                        val operatorMatches = uiState.selectedLayer !in listOf("TMB", "MJT") ||
+                            uiState.routes.any { it.id == bus.routeId && it.operator.equals(uiState.selectedLayer, ignoreCase = true) }
+                        bus.isActive && routeMatches && operatorMatches
                     }.forEach { bus ->
                         val marker = Marker(mapView).apply {
                             position = GeoPoint(bus.latitude, bus.longitude)
@@ -97,8 +159,22 @@ fun MapScreen(viewModel: MapViewModel = hiltViewModel()) {
                         mapView.overlays.add(marker)
                     }
                 }
+                val latitude = uiState.userLatitude
+                val longitude = uiState.userLongitude
+                if (latitude != null && longitude != null) {
+                    mapView.overlays.add(Marker(mapView).apply {
+                        position = GeoPoint(latitude, longitude)
+                        title = "Lokasi Anda"
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    })
+                }
                 mapView.overlays.add(CopyrightOverlay(mapView.context))
                 mapView.invalidate()
+            },
+            onRelease = { mapView ->
+                mapView.onPause()
+                mapView.onDetach()
+                if (mapReference.value === mapView) mapReference.value = null
             },
             modifier = Modifier.fillMaxSize()
         )
@@ -116,21 +192,26 @@ fun MapScreen(viewModel: MapViewModel = hiltViewModel()) {
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Peta Transportasi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (onBack != null) {
+                            IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                            }
+                        }
+                        Column {
+                            Text("Peta Bandung", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("OpenStreetMap · halte dan bus sesuai data tersedia", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                     Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = uiState.showBuses,
-                            onClick = viewModel::toggleBuses,
-                            label = { Text("Bus (${uiState.liveBuses.size})") },
-                            leadingIcon = { Icon(Icons.Filled.DirectionsBus, null, modifier = Modifier.size(16.dp)) }
-                        )
-                        FilterChip(
-                            selected = uiState.showStops,
-                            onClick = viewModel::toggleStops,
-                            label = { Text("Halte (${uiState.stops.size})") },
-                            leadingIcon = { Icon(Icons.Filled.Place, null, modifier = Modifier.size(16.dp)) }
-                        )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(listOf("Semua", "TMB", "MJT", "Halte", "Bus")) { layer ->
+                            FilterChip(
+                                selected = uiState.selectedLayer == layer,
+                                onClick = { viewModel.selectLayer(layer) },
+                                label = { Text(layer) }
+                            )
+                        }
                     }
                     Spacer(Modifier.height(4.dp))
                     Text("Koridor", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -142,7 +223,7 @@ fun MapScreen(viewModel: MapViewModel = hiltViewModel()) {
                                 label = { Text("Semua") }
                             )
                         }
-                        items(uiState.routes) { route ->
+                        items(uiState.routes.filter { uiState.selectedLayer !in listOf("TMB", "MJT") || it.operator.equals(uiState.selectedLayer, true) }) { route ->
                             FilterChip(
                                 selected = uiState.selectedRouteId == route.id,
                                 onClick = { viewModel.selectRoute(route.id) },
@@ -155,6 +236,36 @@ fun MapScreen(viewModel: MapViewModel = hiltViewModel()) {
         }
 
         // Detail dialog/card for bus
+        locationError?.let { message ->
+            Text(
+                message,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp, start = 20.dp, end = 20.dp),
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        IconButton(
+            onClick = {
+                if (hasLocationPermission) loadDeviceLocation() else locationPermission.launchMultiplePermissionRequest()
+            },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).size(52.dp)
+        ) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface, shadowElevation = 4.dp) {
+                Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.MyLocation, contentDescription = "Ke lokasi saya", tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+
+        uiState.selectedStop?.let { stop ->
+            StopInfoCard(
+                stop = stop,
+                onDismiss = { viewModel.selectStop(null) },
+                onDetails = { onStopClick(stop.id) },
+                modifier = Modifier.align(Alignment.BottomCenter).padding(start = 16.dp, end = 16.dp, bottom = 80.dp)
+            )
+        }
         uiState.selectedBus?.let { bus ->
             BusInfoCard(
                 bus = bus,
@@ -201,6 +312,44 @@ private fun BusInfoCard(
                 Text("ETA: ${bus.etaMinutes?.let { "$it menit" } ?: "tidak tersedia"}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 Text("Kecepatan: ${bus.speedKmH.toInt()} km/jam", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
             }
+        }
+    }
+}
+
+@Composable
+private fun StopInfoCard(
+    stop: Stop,
+    onDismiss: () -> Unit,
+    onDetails: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Place, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stop.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, contentDescription = "Tutup")
+                }
+            }
+            if (stop.address.isNotBlank()) {
+                Text(stop.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (stop.corridorsServed.isNotBlank()) {
+                Text("Koridor ${stop.corridorsServed}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            TextButton(onClick = onDetails) { Text("Detail halte") }
         }
     }
 }

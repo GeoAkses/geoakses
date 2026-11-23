@@ -22,11 +22,15 @@ data class MapUiState(
     val liveBuses: List<Bus> = emptyList(),
     val selectedRouteId: String? = null,
     val selectedBus: Bus? = null,
+    val selectedStop: Stop? = null,
+    val selectedLayer: String = "Semua",
     val showStops: Boolean = true,
     val showBuses: Boolean = true,
     val centerLat: Double = Constants.BANDUNG_LATITUDE,
     val centerLon: Double = Constants.BANDUNG_LONGITUDE,
-    val zoomLevel: Double = Constants.DEFAULT_MAP_ZOOM
+    val zoomLevel: Double = Constants.DEFAULT_MAP_ZOOM,
+    val userLatitude: Double? = null,
+    val userLongitude: Double? = null
 )
 
 @HiltViewModel
@@ -76,7 +80,27 @@ class MapViewModel @Inject constructor(
     }
 
     fun selectBus(bus: Bus?) {
-        _uiState.update { it.copy(selectedBus = bus) }
+        _uiState.update { it.copy(selectedBus = bus, selectedStop = null) }
+    }
+
+    fun selectStop(stop: Stop?) {
+        _uiState.update { it.copy(selectedStop = stop, selectedBus = null) }
+    }
+
+    fun selectLayer(layer: String) {
+        _uiState.update { state ->
+            when (layer) {
+                "TMB", "MJT" -> state.copy(selectedLayer = layer, showStops = true, showBuses = true, selectedRouteId = null)
+                "Halte" -> state.copy(selectedLayer = layer, showStops = true, showBuses = false, selectedRouteId = null)
+                "Bus" -> state.copy(selectedLayer = layer, showStops = false, showBuses = true, selectedRouteId = null)
+                else -> state.copy(selectedLayer = "Semua", showStops = true, showBuses = true, selectedRouteId = null)
+            }
+        }
+    }
+
+    fun updateUserLocation(latitude: Double, longitude: Double) {
+        if (latitude !in -90.0..90.0 || longitude !in -180.0..180.0) return
+        _uiState.update { it.copy(userLatitude = latitude, userLongitude = longitude, centerLat = latitude, centerLon = longitude, zoomLevel = 16.0) }
     }
 
     fun toggleStops() {

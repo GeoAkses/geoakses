@@ -49,8 +49,7 @@ fun MainApp(darkTheme: Boolean, onDarkThemeChange: (Boolean) -> Unit) {
     val showBottomBar = currentRoute in listOf(
         Screen.Home.route,
         Screen.Map.route,
-        Screen.Routes.route,
-        Screen.Stops.route,
+        Screen.Favorites.route,
         Screen.Profile.route
     )
 

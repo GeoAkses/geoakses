@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 
 data class RouteListUiState(
@@ -89,8 +90,13 @@ class RouteViewModel @Inject constructor(
     fun loadRouteDetail(routeId: String) {
         viewModelScope.launch {
             _detailState.update { it.copy(isLoading = true) }
-            val route = repository.getRouteById(routeId)
-            _detailState.update { it.copy(route = route, isLoading = false) }
+            try {
+                val route = repository.getRouteById(routeId)
+                _detailState.update { it.copy(route = route, isLoading = false) }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                _detailState.update { it.copy(isLoading = false, error = error.message) }
+            }
         }
         viewModelScope.launch {
             repository.getStopsByRoute(routeId)

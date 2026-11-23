@@ -16,9 +16,12 @@ import com.geoakses.app.ui.screen.profile.ProfileScreen
 import com.geoakses.app.ui.screen.route.RouteDetailScreen
 import com.geoakses.app.ui.screen.route.RouteListScreen
 import com.geoakses.app.ui.screen.fare.FareScreen
+import com.geoakses.app.ui.screen.favorite.FavoritesScreen
 import com.geoakses.app.ui.screen.splash.SplashScreen
 import com.geoakses.app.ui.screen.stop.StopDetailScreen
 import com.geoakses.app.ui.screen.stop.StopListScreen
+import com.geoakses.app.ui.screen.search.SearchScreen
+import com.geoakses.app.data.model.FavoriteKind
 
 @Composable
 fun NavGraph(
@@ -69,7 +72,8 @@ fun NavGraph(
                 onViewAllStops  = { navController.navigate(Screen.Stops.route) },
                 onOpenMap = { navController.navigate(Screen.Map.route) },
                 onOpenFares = { navController.navigate(Screen.Fares.route) },
-                onOpenGuide = { navController.navigate(Screen.Guide.route) }
+                onOpenProfile = { navController.navigate(Screen.Profile.route) },
+                onOpenSearch = { navController.navigate(Screen.Search.route) }
             )
         }
 
@@ -85,14 +89,35 @@ fun NavGraph(
         }
 
         composable(Screen.Map.route) {
-            MapScreen()
+            MapScreen(onStopClick = { stopId -> navController.navigate(Screen.StopDetail.createRoute(stopId)) })
+        }
+
+        composable(Screen.Favorites.route) {
+            FavoritesScreen(
+                onBrowse = { navController.navigate(Screen.Routes.route) },
+                onFavoriteClick = { favorite ->
+                    when (favorite.kind) {
+                        FavoriteKind.ROUTE -> navController.navigate(Screen.RouteDetail.createRoute(favorite.itemId))
+                        FavoriteKind.STOP -> navController.navigate(Screen.StopDetail.createRoute(favorite.itemId))
+                    }
+                }
+            )
+        }
+
+        composable(Screen.Search.route) {
+            SearchScreen(
+                onBack = { navController.popBackStack() },
+                onRouteClick = { routeId -> navController.navigate(Screen.RouteDetail.createRoute(routeId)) },
+                onStopClick = { stopId -> navController.navigate(Screen.StopDetail.createRoute(stopId)) }
+            )
         }
 
         composable(Screen.Routes.route) {
             RouteListScreen(
                 onRouteClick = { routeId ->
                     navController.navigate(Screen.RouteDetail.createRoute(routeId))
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -103,7 +128,8 @@ fun NavGraph(
             val routeId = backStackEntry.arguments?.getString("routeId") ?: return@composable
             RouteDetailScreen(
                 routeId = routeId,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onOpenMap = { navController.navigate(Screen.Map.route) }
             )
         }
 
@@ -111,7 +137,8 @@ fun NavGraph(
             StopListScreen(
                 onStopClick = { stopId ->
                     navController.navigate(Screen.StopDetail.createRoute(stopId))
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 

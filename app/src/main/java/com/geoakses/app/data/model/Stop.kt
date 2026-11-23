@@ -30,6 +30,10 @@ data class Stop(
     @SerializedName("is_shelter")
     val isShelter: Boolean = false,
 
+    @SerializedName("is_active")
+    @ColumnInfo(defaultValue = "1")
+    val isActive: Boolean = true,
+
     @Ignore
     @SerializedName("distance_meters")
     var distanceMeters: Double = 0.0,
@@ -40,7 +44,10 @@ data class Stop(
 
     @SerializedName("source")
     @ColumnInfo(defaultValue = "'GeoAkses demo'")
-    val source: String = ""
+    val source: String = "",
+
+    @SerializedName("verified_at")
+    val verifiedAt: String? = null
 ) {
     // Secondary constructor for Room
     constructor(
@@ -52,6 +59,8 @@ data class Stop(
         corridorsServed: String,
         isShelter: Boolean,
         dataStatus: String,
-        source: String
-    ) : this(id, name, latitude, longitude, address, corridorsServed, isShelter, 0.0, dataStatus, source)
+        source: String,
+        isActive: Boolean,
+        verifiedAt: String?
+    ) : this(id, name, latitude, longitude, address, corridorsServed, isShelter, isActive, 0.0, dataStatus, source, verifiedAt)
 }

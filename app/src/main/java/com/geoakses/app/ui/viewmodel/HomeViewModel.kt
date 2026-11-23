@@ -6,7 +6,6 @@ import com.geoakses.app.data.model.Bus
 import com.geoakses.app.data.model.Route
 import com.geoakses.app.data.model.Stop
 import com.geoakses.app.data.repository.TransitRepository
-import com.geoakses.app.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,9 +22,9 @@ data class HomeUiState(
     val liveBuses: List<Bus> = emptyList(),
     val error: String? = null,
     val searchQuery: String = "",
-    val locationLabel: String = "Pusat Bandung",
-    val latitude: Double = Constants.BANDUNG_LATITUDE,
-    val longitude: Double = Constants.BANDUNG_LONGITUDE
+    val locationLabel: String = "Gunakan lokasi atau cari halte secara manual",
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 @HiltViewModel
@@ -54,7 +53,14 @@ class HomeViewModel @Inject constructor(
             repository.getStops().collect { result ->
                 result.onSuccess { stops ->
                         _uiState.update { state ->
-                            state.copy(stops = stops, nearbyStops = closestStops(stops, state.latitude, state.longitude))
+                            val latitude = state.latitude
+                            val longitude = state.longitude
+                            state.copy(
+                                stops = stops,
+                                nearbyStops = if (latitude != null && longitude != null) {
+                                    closestStops(stops, latitude, longitude)
+                                } else emptyList()
+                            )
                         }
                 }
                 result.onFailure { error -> _uiState.update { it.copy(error = error.message) } }
@@ -77,15 +83,17 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onLocationUpdated(latitude: Double, longitude: Double) {
+        if (latitude !in -90.0..90.0 || longitude !in -180.0..180.0) {
+            onLocationUnavailable()
+            return
+        }
         _uiState.update { state ->
             state.copy(
-                locationLabel = "Lokasi saya",
+                locationLabel = "Berdasarkan lokasi perangkat",
                 error = null,
                 latitude = latitude,
                 longitude = longitude,
-                nearbyStops = state.stops.map { stop ->
-                    stop.copy(distanceMeters = distanceMeters(latitude, longitude, stop.latitude, stop.longitude))
-                }.sortedBy(Stop::distanceMeters).take(5)
+                nearbyStops = closestStops(state.stops, latitude, longitude)
             )
         }
     }
@@ -95,6 +103,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun closestStops(stops: List<Stop>, latitude: Double, longitude: Double): List<Stop> = stops
+        .filter { it.latitude in -90.0..90.0 && it.longitude in -180.0..180.0 }
         .map { stop -> stop.copy(distanceMeters = distanceMeters(latitude, longitude, stop.latitude, stop.longitude)) }
         .sortedBy(Stop::distanceMeters)
         .take(5)

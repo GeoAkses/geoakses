@@ -42,5 +42,8 @@ data class Schedule(
     val source: String = "",
 
     @SerializedName("stop_id")
-    val stopId: String? = null
+    val stopId: String? = null,
+
+    @SerializedName("verified_at")
+    val verifiedAt: String? = null
 )

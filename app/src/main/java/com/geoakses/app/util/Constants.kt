@@ -1,9 +1,10 @@
 package com.geoakses.app.util
 
 import com.geoakses.app.data.model.Route
+import com.geoakses.app.BuildConfig
 
 object Constants {
-    const val BASE_URL = "https://api.geoakses.bandung.go.id/api/v1/"
+    val BASE_URL: String = BuildConfig.API_BASE_URL
     const val NETWORK_TIMEOUT = 10L
     const val DATASTORE_NAME = "geoakses_preferences"
     const val BANDUNG_LATITUDE = -6.917464

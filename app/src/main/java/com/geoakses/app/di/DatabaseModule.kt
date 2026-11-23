@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.geoakses.app.data.local.AppDatabase
 import com.geoakses.app.data.local.dao.RouteDao
+import com.geoakses.app.data.local.dao.FavoriteDao
 import com.geoakses.app.data.local.dao.ScheduleDao
 import com.geoakses.app.data.local.dao.StopDao
 import dagger.Module
@@ -24,12 +25,21 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "geoakses_database"
-        ).addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3).build()
+        ).addMigrations(
+            AppDatabase.MIGRATION_1_2,
+            AppDatabase.MIGRATION_2_3,
+            AppDatabase.MIGRATION_3_4,
+            AppDatabase.MIGRATION_4_5
+        ).build()
     }
 
     @Provides
     @Singleton
     fun provideRouteDao(db: AppDatabase): RouteDao = db.routeDao()
+
+    @Provides
+    @Singleton
+    fun provideFavoriteDao(db: AppDatabase): FavoriteDao = db.favoriteDao()
 
     @Provides
     @Singleton

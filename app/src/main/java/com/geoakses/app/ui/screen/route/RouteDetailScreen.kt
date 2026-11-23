@@ -13,52 +13,64 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.geoakses.app.data.model.Bus
+import com.geoakses.app.data.model.FavoriteKind
 import com.geoakses.app.data.model.OccupancyStatus
 import com.geoakses.app.data.model.Schedule
 import com.geoakses.app.data.model.Stop
+import com.geoakses.app.ui.theme.SemanticErrorContent
+import com.geoakses.app.ui.theme.SemanticSuccess
+import com.geoakses.app.ui.theme.SemanticWarningContent
+import com.geoakses.app.ui.component.GeoAksesEmptyState
+import com.geoakses.app.ui.component.GeoAksesTopBar
 import com.geoakses.app.ui.viewmodel.RouteViewModel
+import com.geoakses.app.ui.viewmodel.FavoritesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RouteDetailScreen(
     routeId: String,
     onBack: () -> Unit,
+    onOpenMap: () -> Unit,
     viewModel: RouteViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.detailState.collectAsState()
+    val favoritesViewModel: FavoritesViewModel = hiltViewModel()
+    val favoriteItems by favoritesViewModel.favorites.collectAsState()
 
     LaunchedEffect(routeId) {
         viewModel.loadRouteDetail(routeId)
     }
 
     val route = uiState.route
-    val routeColor = if (route != null) {
-        try {
-            Color(android.graphics.Color.parseColor(route.colorHex))
-        } catch (e: Exception) {
-            MaterialTheme.colorScheme.primary
-        }
-    } else MaterialTheme.colorScheme.primary
-
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(route?.code ?: "Detail Rute", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Kembali")
+            GeoAksesTopBar(
+                title = route?.code ?: "Detail Koridor",
+                onBack = onBack,
+                actions = {
+                    route?.let { currentRoute ->
+                        val isFavorite = favoriteItems.any {
+                            it.itemId == currentRoute.id && it.kind == FavoriteKind.ROUTE
+                        }
+                        IconButton(onClick = {
+                            favoritesViewModel.toggle(
+                                currentRoute.id,
+                                FavoriteKind.ROUTE,
+                                currentRoute.name,
+                                "${currentRoute.origin} → ${currentRoute.destination}"
+                            )
+                        }) {
+                            Icon(
+                                if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                contentDescription = if (isFavorite) "Hapus dari favorit" else "Simpan ke favorit"
+                            )
+                        }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = routeColor,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
+                }
             )
         }
     ) { padding ->
@@ -79,65 +91,77 @@ fun RouteDetailScreen(
         ) {
             item {
                 if (route != null) {
-                    Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(route.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(4.dp))
-                            Text(route.operator, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                "Sumber rute: ${route.source}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            RouteInfoRow(Icons.Filled.TripOrigin, "Asal", route.origin)
-                            RouteInfoRow(Icons.Filled.Place, "Tujuan", route.destination)
-                            RouteInfoRow(Icons.Filled.AccessTime, "Jam Operasional", route.operatingHours)
-                            if (route.headwayMinutes > 0) RouteInfoRow(Icons.Filled.Timer, "Headway", "${route.headwayMinutes} menit")
-                            if (route.fare > 0) RouteInfoRow(Icons.Filled.AttachMoney, "Tarif dasar", "Rp ${route.fare}")
-                            if (route.stopsCount > 0) RouteInfoRow(Icons.Filled.Place, "Jumlah Halte", "${route.stopsCount} halte")
-                            if (route.description.isNotBlank()) {
-                                Spacer(Modifier.height(8.dp))
-                                Text(route.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Card(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(18.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(10.dp)) {
+                                    Text(route.operator, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                }
+                                Text(route.code, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                             }
+                            Spacer(Modifier.height(8.dp))
+                            Text(route.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                            Text("${route.origin} → ${route.destination}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(8.dp))
+                            Text("Sumber: ${route.source}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 } else if (!uiState.isLoading) {
-                    EmptyState("Koridor tidak ditemukan di cache atau layanan.")
+                    GeoAksesEmptyState("Koridor tidak ditemukan", "Periksa koneksi atau kembali ke daftar rute.")
                 }
             }
 
             item {
                 TabRow(selectedTabIndex = uiState.selectedTab) {
-                    Tab(selected = uiState.selectedTab == 0, onClick = { viewModel.onTabSelected(0) }, text = { Text("Halte") })
-                    Tab(selected = uiState.selectedTab == 1, onClick = { viewModel.onTabSelected(1) }, text = { Text("Bus Aktif") })
+                    Tab(selected = uiState.selectedTab == 0, onClick = { viewModel.onTabSelected(0) }, text = { Text("Informasi") })
+                    Tab(selected = uiState.selectedTab == 1, onClick = { viewModel.onTabSelected(1) }, text = { Text("Rute") })
                     Tab(selected = uiState.selectedTab == 2, onClick = { viewModel.onTabSelected(2) }, text = { Text("Jadwal") })
                 }
             }
 
             when (uiState.selectedTab) {
                 0 -> {
+                    if (route != null) {
+                        item {
+                            Card(shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    RouteInfoRow(Icons.Filled.TripOrigin, "Asal", route.origin)
+                                    RouteInfoRow(Icons.Filled.Place, "Tujuan", route.destination)
+                                    RouteInfoRow(Icons.Filled.AccessTime, "Jam Operasional", route.operatingHours.ifBlank { "Belum tersedia" })
+                                    RouteInfoRow(Icons.Filled.AttachMoney, "Tarif dasar", route.fare.takeIf { it > 0 }?.let { "Rp $it" } ?: "Belum tersedia")
+                                    RouteInfoRow(Icons.Filled.Place, "Jumlah halte", route.stopsCount.takeIf { it > 0 }?.let { "$it halte" } ?: "Belum tersedia")
+                                    if (route.description.isNotBlank()) {
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(route.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    TextButton(onClick = onOpenMap) { Text("Lihat halte di peta") }
+                                }
+                            }
+                        }
+                        if (uiState.liveBuses.isEmpty()) {
+                            item {
+                                GeoAksesEmptyState(
+                                    title = "Bus belum dapat dilacak",
+                                    description = "Feed posisi resmi untuk koridor ini belum tersedia."
+                                )
+                            }
+                        } else {
+                            items(uiState.liveBuses) { bus -> BusDetailItem(bus = bus) }
+                        }
+                    }
+                }
+                1 -> {
                     if (uiState.stops.isEmpty()) {
-                        item { EmptyState("Data halte berkoordinat dan terverifikasi belum tersedia.") }
+                        item { GeoAksesEmptyState("Urutan halte belum tersedia", "Data halte aktif untuk koridor ini belum terverifikasi.") }
                     } else {
                         items(uiState.stops) { stop ->
                             StopRowItem(stop = stop)
                         }
                     }
                 }
-                1 -> {
-                    if (uiState.liveBuses.isEmpty()) {
-                        item { EmptyState("Feed posisi bus resmi belum terhubung. Data lokasi tidak disimulasikan.") }
-                    } else {
-                        items(uiState.liveBuses) { bus ->
-                            BusDetailItem(bus = bus)
-                        }
-                    }
-                }
                 2 -> {
                     if (uiState.schedules.isEmpty()) {
-                        item { EmptyState("Jadwal keberangkatan per halte belum tersedia dari sumber yang terhubung.") }
+                        item { GeoAksesEmptyState("Jadwal belum tersedia", "Jadwal keberangkatan per halte belum terhubung ke sumber data.") }
                     } else {
                         items(uiState.schedules) { schedule ->
                             ScheduleItem(schedule = schedule)
@@ -178,9 +202,9 @@ private fun StopRowItem(stop: Stop) {
 @Composable
 private fun BusDetailItem(bus: Bus) {
     val occupancyColor = when (bus.occupancy) {
-        OccupancyStatus.EMPTY, OccupancyStatus.SEATS_AVAILABLE -> Color(0xFF2E7D32)
-        OccupancyStatus.STANDING_ONLY -> Color(0xFFF57C00)
-        OccupancyStatus.FULL -> Color(0xFFD32F2F)
+        OccupancyStatus.EMPTY, OccupancyStatus.SEATS_AVAILABLE -> SemanticSuccess
+        OccupancyStatus.STANDING_ONLY -> SemanticWarningContent
+        OccupancyStatus.FULL -> SemanticErrorContent
         OccupancyStatus.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {

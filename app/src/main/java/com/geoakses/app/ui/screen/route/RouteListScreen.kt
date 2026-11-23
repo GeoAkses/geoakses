@@ -6,7 +6,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,11 +19,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.geoakses.app.data.model.Route
+import com.geoakses.app.ui.component.GeoAksesCategoryChip
+import com.geoakses.app.ui.component.GeoAksesEmptyState
+import com.geoakses.app.ui.component.GeoAksesLoadingState
+import com.geoakses.app.ui.component.GeoAksesSearchBar
+import com.geoakses.app.ui.component.GeoAksesTopBar
+import com.geoakses.app.ui.theme.SemanticSuccess
 import com.geoakses.app.ui.viewmodel.RouteViewModel
 
 @Composable
 fun RouteListScreen(
     onRouteClick: (String) -> Unit,
+    onBack: () -> Unit,
     viewModel: RouteViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.listState.collectAsState()
@@ -32,39 +41,14 @@ fun RouteListScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.primary)
-                .padding(16.dp)
-                .padding(top = 8.dp)
-        ) {
-            Column {
-                Text(
-                    "Daftar Rute & Koridor",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = uiState.searchQuery,
-                    onValueChange = viewModel::onSearchQueryChange,
-                    placeholder = { Text("Cari koridor TMB/MJT...", color = Color.White.copy(alpha = 0.7f)) },
-                    leadingIcon = { Icon(Icons.Filled.Search, null, tint = Color.White) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f),
-                        focusedBorderColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedTextColor = Color.White,
-                        cursorColor = Color.White
-                    ),
-                    singleLine = true
-                )
-            }
-        }
+        GeoAksesTopBar(title = "Daftar Rute", onBack = onBack)
+        GeoAksesSearchBar(
+            value = uiState.searchQuery,
+            onValueChange = viewModel::onSearchQueryChange,
+            placeholder = "Cari koridor, nama rute, atau tujuan...",
+            modifier = Modifier.padding(horizontal = 16.dp),
+            onClear = { viewModel.onSearchQueryChange("") }
+        )
 
         Row(
             modifier = Modifier
@@ -73,18 +57,16 @@ fun RouteListScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             filters.forEach { filter ->
-                FilterChip(
+                GeoAksesCategoryChip(
                     selected = uiState.selectedFilter == filter,
                     onClick = { viewModel.onFilterChange(filter) },
-                    label = { Text(filter) }
+                    label = filter
                 )
             }
         }
 
         if (uiState.isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { GeoAksesLoadingState() }
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(16.dp),
@@ -92,10 +74,9 @@ fun RouteListScreen(
             ) {
                 if (uiState.filteredRoutes.isEmpty()) {
                     item {
-                        Text(
-                            "Tidak ada koridor yang cocok. Coba operator atau kata kunci lain.",
-                            modifier = Modifier.fillMaxWidth().padding(24.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        GeoAksesEmptyState(
+                            title = "Koridor tidak ditemukan",
+                            description = "Coba operator atau kata kunci lain."
                         )
                     }
                 } else {
@@ -144,13 +125,13 @@ fun RouteListItem(route: Route, onClick: () -> Unit) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(if (route.isActive) Color(0xFF2E7D32).copy(alpha = 0.1f) else Color.Gray.copy(alpha = 0.1f))
+                            .background(if (route.isActive) SemanticSuccess.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant)
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             if (route.isActive) "Aktif" else "Tidak Aktif",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (route.isActive) Color(0xFF2E7D32) else Color.Gray
+                            color = if (route.isActive) SemanticSuccess else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

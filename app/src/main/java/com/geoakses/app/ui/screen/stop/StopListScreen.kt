@@ -11,58 +11,43 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.geoakses.app.data.model.Stop
+import com.geoakses.app.ui.component.GeoAksesEmptyState
+import com.geoakses.app.ui.component.GeoAksesSearchBar
+import com.geoakses.app.ui.component.GeoAksesTopBar
 import com.geoakses.app.ui.viewmodel.StopViewModel
 
 @Composable
 fun StopListScreen(
     onStopClick: (String) -> Unit,
+    onBack: () -> Unit,
     viewModel: StopViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.listState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.primary)
-                .padding(16.dp)
-                .padding(top = 8.dp)
-        ) {
-            Column {
-                Text("Daftar Halte & Shelter", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = uiState.searchQuery,
-                    onValueChange = viewModel::onSearchQueryChange,
-                    placeholder = { Text("Cari nama halte atau koridor...", color = Color.White.copy(alpha = 0.7f)) },
-                    leadingIcon = { Icon(Icons.Filled.Search, null, tint = Color.White) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f),
-                        focusedBorderColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedTextColor = Color.White,
-                        cursorColor = Color.White
-                    ),
-                    singleLine = true
-                )
-            }
-        }
+        GeoAksesTopBar(title = "Daftar Halte", onBack = onBack)
+        GeoAksesSearchBar(
+            value = uiState.searchQuery,
+            onValueChange = viewModel::onSearchQueryChange,
+            placeholder = "Cari nama halte atau koridor...",
+            modifier = Modifier.padding(horizontal = 16.dp),
+            onClear = { viewModel.onSearchQueryChange("") }
+        )
 
         if (uiState.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         } else if (uiState.filteredStops.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Data halte berkoordinat dan terverifikasi belum tersedia.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            GeoAksesEmptyState(
+                title = if (uiState.searchQuery.isBlank()) "Data halte belum tersedia" else "Halte tidak ditemukan",
+                description = if (uiState.searchQuery.isBlank()) "Data halte aktif dengan koordinat terverifikasi belum tersedia." else "Coba nama halte atau koridor lain.",
+                modifier = Modifier.padding(16.dp)
+            )
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(16.dp),

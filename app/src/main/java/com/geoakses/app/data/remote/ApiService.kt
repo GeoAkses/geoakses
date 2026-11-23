@@ -11,7 +11,12 @@ import retrofit2.http.Query
 interface ApiService {
 
     @GET("routes")
-    suspend fun getRoutes(): List<Route>
+    suspend fun getRoutes(
+        @Query("operator") operator: String? = null,
+        @Query("q") query: String? = null,
+        @Query("limit") limit: Int? = null,
+        @Query("offset") offset: Int? = null
+    ): List<Route>
 
     @GET("routes/{id}")
     suspend fun getRouteById(
@@ -19,13 +24,20 @@ interface ApiService {
     ): Route
 
     @GET("stops")
-    suspend fun getStops(): List<Stop>
+    suspend fun getStops(
+        @Query("route_id") routeId: String? = null,
+        @Query("limit") limit: Int? = null,
+        @Query("offset") offset: Int? = null
+    ): List<Stop>
 
     @GET("stops")
     suspend fun getNearbyStops(
         @Query("lat") latitude: Double,
         @Query("lon") longitude: Double,
-        @Query("radius_m") radiusMeters: Int = 5000
+        @Query("radius_m") radiusMeters: Int = 5000,
+        @Query("route_id") routeId: String? = null,
+        @Query("limit") limit: Int? = null,
+        @Query("offset") offset: Int? = null
     ): List<Stop>
 
     @GET("buses/live")
@@ -35,6 +47,7 @@ interface ApiService {
 
     @GET("schedules")
     suspend fun getSchedules(
-        @Query("route_id") routeId: String
+        @Query("route_id") routeId: String,
+        @Query("day_type") dayType: String? = null
     ): List<Schedule>
 }

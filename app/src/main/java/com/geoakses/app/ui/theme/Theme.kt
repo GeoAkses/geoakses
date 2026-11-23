@@ -11,45 +11,52 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    primary = BrandBlue,
+    primary = BrandPrimary,
     onPrimary = White,
-    primaryContainer = Color(0xFFD9E8EF),
-    onPrimaryContainer = BrandBlue,
-    secondary = BrandTeal,
+    primaryContainer = BrandPrimaryLight,
+    onPrimaryContainer = BrandPrimaryDark,
+    secondary = BrandPrimaryDark,
     onSecondary = White,
-    tertiary = RouteGold,
-    onTertiary = Ink,
-    background = Cloud,
-    onBackground = Ink,
-    surface = White,
-    onSurface = Ink,
-    surfaceVariant = Color(0xFFE8EFF1),
-    onSurfaceVariant = Muted,
-    outline = Line
+    secondaryContainer = BrandPrimaryLight,
+    onSecondaryContainer = BrandPrimaryDark,
+    tertiary = SemanticWarning,
+    onTertiary = BrandText,
+    error = SemanticError,
+    onError = White,
+    background = BrandBackground,
+    onBackground = BrandText,
+    surface = BrandSurface,
+    onSurface = BrandText,
+    surfaceVariant = BrandPrimaryLight,
+    onSurfaceVariant = BrandMuted,
+    outline = BrandDivider
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF416B7F),
-    onPrimary = White,
-    primaryContainer = BrandBlue,
-    onPrimaryContainer = Color(0xFFD9E8EF),
-    secondary = Color(0xFF74C8B7),
+    primary = NightPrimary,
+    onPrimary = Night,
+    primaryContainer = NightPrimaryContainer,
+    onPrimaryContainer = BrandPrimaryLight,
+    secondary = NightSecondary,
     onSecondary = Night,
-    tertiary = RouteGold,
+    secondaryContainer = NightPrimaryContainer,
+    onSecondaryContainer = NightPrimary,
+    tertiary = NightWarning,
     onTertiary = Night,
+    error = NightError,
+    onError = NightOnError,
     background = Night,
-    onBackground = Color(0xFFE8F0F2),
+    onBackground = NightText,
     surface = NightSurface,
-    onSurface = Color(0xFFE8F0F2),
+    onSurface = NightText,
     surfaceVariant = NightRaised,
-    onSurfaceVariant = Color(0xFFB5C4CA),
-    outline = Color(0xFF425963)
+    onSurfaceVariant = NightMuted,
+    outline = NightDivider
 )
 
 @Composable
@@ -71,7 +78,7 @@ fun GeoAksesTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
+            window.statusBarColor = colorScheme.background.toArgb()
             window.navigationBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
             WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme

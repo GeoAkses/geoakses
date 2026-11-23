@@ -53,7 +53,7 @@ data class Bus(
     val etaMinutes: Int? = null,
 
     @SerializedName("last_updated")
-    val lastUpdated: Long = System.currentTimeMillis(),
+    val lastUpdated: Long = 0L,
 
     @SerializedName("observed_at")
     val observedAt: String = "",
@@ -62,5 +62,8 @@ data class Bus(
     val dataStatus: String = "unavailable",
 
     @SerializedName("source")
-    val source: String = ""
+    val source: String = "",
+
+    @SerializedName("is_active")
+    val isActive: Boolean = false
 )

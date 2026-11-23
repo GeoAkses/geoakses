@@ -1,11 +1,10 @@
 package com.geoakses.app.ui.component
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsBus
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -29,9 +28,8 @@ data class BottomNavItem(
 fun BottomNavBar(navController: NavHostController) {
     val items = listOf(
         BottomNavItem("Beranda", Icons.Filled.Home, Screen.Home),
-        BottomNavItem("Peta",    Icons.Filled.Map, Screen.Map),
-        BottomNavItem("Rute",   Icons.Filled.DirectionsBus, Screen.Routes),
-        BottomNavItem("Halte",  Icons.Filled.Place, Screen.Stops),
+        BottomNavItem("Peta", Icons.Filled.Map, Screen.Map),
+        BottomNavItem("Favorit", Icons.Filled.FavoriteBorder, Screen.Favorites),
         BottomNavItem("Profil", Icons.Filled.Person, Screen.Profile)
     )
 
