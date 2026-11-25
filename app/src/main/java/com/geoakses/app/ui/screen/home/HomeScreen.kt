@@ -16,26 +16,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.google.android.gms.location.LocationServices
 import com.geoakses.app.data.model.Bus
+import com.geoakses.app.data.model.FacilityCategory
 import com.geoakses.app.data.model.OccupancyStatus
+import com.geoakses.app.data.model.PublicFacility
 import com.geoakses.app.data.model.Route
 import com.geoakses.app.data.model.Stop
 import com.geoakses.app.ui.component.GeoAksesLoadingState
 import com.geoakses.app.ui.component.GeoAksesSearchBar
 import com.geoakses.app.ui.component.GeoAksesSectionHeader
-import com.geoakses.app.ui.viewmodel.HomeViewModel
 import com.geoakses.app.ui.theme.SemanticErrorContent
 import com.geoakses.app.ui.theme.SemanticSuccess
 import com.geoakses.app.ui.theme.SemanticWarningContent
+import com.geoakses.app.ui.viewmodel.HomeViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.android.gms.location.LocationServices
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -56,6 +58,16 @@ fun HomeScreen(
         listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
     )
     val hasLocationPermission = locationPermission.permissions.any { it.status.isGranted }
+
+    val filteredFacilities = remember(uiState.facilities, uiState.selectedFacilityCategory) {
+        if (uiState.selectedFacilityCategory == FacilityCategory.ALL) {
+            uiState.facilities
+        } else {
+            uiState.facilities.filter {
+                it.category.equals(uiState.selectedFacilityCategory, ignoreCase = true)
+            }
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -83,7 +95,7 @@ fun HomeScreen(
                 GeoAksesSearchBar(
                     value = "",
                     onValueChange = {},
-                    placeholder = "Cari halte, rute, atau lokasi...",
+                    placeholder = "Cari fasilitas umum, halte, atau rute...",
                     readOnly = true,
                     onClick = onOpenSearch
                 )
@@ -109,6 +121,48 @@ fun HomeScreen(
                         QuickActionItem(Icons.Filled.Settings, "Pengaturan", MaterialTheme.colorScheme.onSurfaceVariant, onOpenProfile, Modifier.weight(1f))
                     }
                 }
+            }
+        }
+
+        // Fasilitas Umum Bandung
+        item {
+            GeoAksesSectionHeader(
+                title = "Fasilitas Umum Bandung",
+                actionLabel = "Lihat di Peta",
+                onAction = onOpenMap
+            )
+        }
+        item {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(FacilityCategory.ALL_CATEGORIES) { category ->
+                    FilterChip(
+                        selected = uiState.selectedFacilityCategory == category,
+                        onClick = { viewModel.selectFacilityCategory(category) },
+                        label = { Text(category) }
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+        if (filteredFacilities.isEmpty()) {
+            item {
+                Text(
+                    text = if (uiState.facilities.isEmpty()) "Memuat data fasilitas umum Bandung..." else "Belum ada fasilitas pada kategori ${uiState.selectedFacilityCategory}.",
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            items(filteredFacilities.take(5)) { facility ->
+                PublicFacilityItem(
+                    facility = facility,
+                    onFindRoute = onOpenMap,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
             }
         }
 
@@ -205,6 +259,77 @@ fun HomeScreen(
 }
 
 @Composable
+private fun PublicFacilityItem(
+    facility: PublicFacility,
+    onFindRoute: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Text(
+                        text = facility.category,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Text(
+                    text = facility.operatingHours,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(facility.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            if (facility.address.isNotBlank()) {
+                Text(facility.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (facility.description.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(facility.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface, maxLines = 2)
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (facility.accessibilityInfo.isNotBlank()) facility.accessibilityInfo else "Lihat titik & rute di peta",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 2
+                )
+                Spacer(Modifier.width(8.dp))
+                FilledTonalButton(
+                    onClick = onFindRoute,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Icon(Icons.Filled.Directions, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Cari Rute", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun QuickActionItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
@@ -249,7 +374,7 @@ private fun HomeHeroCard(onExplore: () -> Unit) {
                 Text("Transportasi Bandung Lebih Mudah", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Jelajahi informasi rute dan halte yang tersedia.",
+                    "Temukan fasilitas umum dan rekomendasi transportasi publik di Kota Bandung.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )

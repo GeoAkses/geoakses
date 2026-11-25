@@ -3,6 +3,7 @@ package com.geoakses.app.di
 import android.content.Context
 import androidx.room.Room
 import com.geoakses.app.data.local.AppDatabase
+import com.geoakses.app.data.local.dao.FacilityDao
 import com.geoakses.app.data.local.dao.RouteDao
 import com.geoakses.app.data.local.dao.FavoriteDao
 import com.geoakses.app.data.local.dao.ScheduleDao
@@ -29,7 +30,8 @@ object DatabaseModule {
             AppDatabase.MIGRATION_1_2,
             AppDatabase.MIGRATION_2_3,
             AppDatabase.MIGRATION_3_4,
-            AppDatabase.MIGRATION_4_5
+            AppDatabase.MIGRATION_4_5,
+            AppDatabase.MIGRATION_5_6
         ).build()
     }
 
@@ -48,4 +50,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideScheduleDao(db: AppDatabase): ScheduleDao = db.scheduleDao()
+
+    @Provides
+    @Singleton
+    fun provideFacilityDao(db: AppDatabase): FacilityDao = db.facilityDao()
 }

@@ -3,8 +3,11 @@ package com.geoakses.app.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.geoakses.app.data.model.Bus
+import com.geoakses.app.data.model.FacilityCategory
+import com.geoakses.app.data.model.PublicFacility
 import com.geoakses.app.data.model.Route
 import com.geoakses.app.data.model.Stop
+import com.geoakses.app.data.repository.FacilityRepository
 import com.geoakses.app.data.repository.TransitRepository
 import com.geoakses.app.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,12 +23,16 @@ data class MapUiState(
     val routes: List<Route> = emptyList(),
     val stops: List<Stop> = emptyList(),
     val liveBuses: List<Bus> = emptyList(),
+    val facilities: List<PublicFacility> = emptyList(),
     val selectedRouteId: String? = null,
     val selectedBus: Bus? = null,
     val selectedStop: Stop? = null,
+    val selectedFacility: PublicFacility? = null,
+    val selectedFacilityCategory: String = FacilityCategory.ALL,
     val selectedLayer: String = "Semua",
     val showStops: Boolean = true,
     val showBuses: Boolean = true,
+    val showFacilities: Boolean = true,
     val centerLat: Double = Constants.BANDUNG_LATITUDE,
     val centerLon: Double = Constants.BANDUNG_LONGITUDE,
     val zoomLevel: Double = Constants.DEFAULT_MAP_ZOOM,
@@ -35,7 +42,8 @@ data class MapUiState(
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
-    private val repository: TransitRepository
+    private val repository: TransitRepository,
+    private val facilityRepository: FacilityRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -53,6 +61,13 @@ class MapViewModel @Inject constructor(
                     result.onSuccess { routes ->
                         _uiState.update { it.copy(routes = routes, isLoading = false) }
                     }
+                }
+        }
+        viewModelScope.launch {
+            facilityRepository.getAllFacilities()
+                .catch { }
+                .collect { facilities ->
+                    _uiState.update { it.copy(facilities = facilities) }
                 }
         }
         viewModelScope.launch {
@@ -80,20 +95,29 @@ class MapViewModel @Inject constructor(
     }
 
     fun selectBus(bus: Bus?) {
-        _uiState.update { it.copy(selectedBus = bus, selectedStop = null) }
+        _uiState.update { it.copy(selectedBus = bus, selectedStop = null, selectedFacility = null) }
     }
 
     fun selectStop(stop: Stop?) {
-        _uiState.update { it.copy(selectedStop = stop, selectedBus = null) }
+        _uiState.update { it.copy(selectedStop = stop, selectedBus = null, selectedFacility = null) }
+    }
+
+    fun selectFacility(facility: PublicFacility?) {
+        _uiState.update { it.copy(selectedFacility = facility, selectedStop = null, selectedBus = null) }
+    }
+
+    fun selectFacilityCategory(category: String) {
+        _uiState.update { it.copy(selectedFacilityCategory = category, showFacilities = true) }
     }
 
     fun selectLayer(layer: String) {
         _uiState.update { state ->
             when (layer) {
-                "TMB", "MJT" -> state.copy(selectedLayer = layer, showStops = true, showBuses = true, selectedRouteId = null)
-                "Halte" -> state.copy(selectedLayer = layer, showStops = true, showBuses = false, selectedRouteId = null)
-                "Bus" -> state.copy(selectedLayer = layer, showStops = false, showBuses = true, selectedRouteId = null)
-                else -> state.copy(selectedLayer = "Semua", showStops = true, showBuses = true, selectedRouteId = null)
+                "TMB", "MJT" -> state.copy(selectedLayer = layer, showStops = true, showBuses = true, showFacilities = true, selectedRouteId = null)
+                "Halte" -> state.copy(selectedLayer = layer, showStops = true, showBuses = false, showFacilities = false, selectedRouteId = null)
+                "Bus" -> state.copy(selectedLayer = layer, showStops = false, showBuses = true, showFacilities = false, selectedRouteId = null)
+                "Fasilitas" -> state.copy(selectedLayer = layer, showStops = false, showBuses = false, showFacilities = true, selectedRouteId = null)
+                else -> state.copy(selectedLayer = "Semua", showStops = true, showBuses = true, showFacilities = true, selectedRouteId = null)
             }
         }
     }

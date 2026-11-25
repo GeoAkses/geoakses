@@ -4,18 +4,20 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.geoakses.app.data.local.dao.FacilityDao
 import com.geoakses.app.data.local.dao.RouteDao
 import com.geoakses.app.data.local.dao.FavoriteDao
 import com.geoakses.app.data.local.dao.ScheduleDao
 import com.geoakses.app.data.local.dao.StopDao
+import com.geoakses.app.data.model.PublicFacility
 import com.geoakses.app.data.model.Route
 import com.geoakses.app.data.model.Favorite
 import com.geoakses.app.data.model.Schedule
 import com.geoakses.app.data.model.Stop
 
 @Database(
-    entities = [Route::class, Stop::class, Schedule::class, Favorite::class],
-    version = 5,
+    entities = [Route::class, Stop::class, Schedule::class, Favorite::class, PublicFacility::class],
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -23,6 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun favoriteDao(): FavoriteDao
     abstract fun stopDao(): StopDao
     abstract fun scheduleDao(): ScheduleDao
+    abstract fun facilityDao(): FacilityDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -78,6 +81,29 @@ abstract class AppDatabase : RoomDatabase() {
                         subtitle TEXT NOT NULL,
                         savedAt INTEGER NOT NULL,
                         PRIMARY KEY(itemId, kind)
+                    )
+                """.trimIndent())
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS public_facilities (
+                        id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        category TEXT NOT NULL,
+                        address TEXT NOT NULL DEFAULT '',
+                        latitude REAL NOT NULL,
+                        longitude REAL NOT NULL,
+                        operatingHours TEXT NOT NULL DEFAULT 'Belum tersedia',
+                        description TEXT NOT NULL DEFAULT '',
+                        accessibilityInfo TEXT NOT NULL DEFAULT '',
+                        phone TEXT NOT NULL DEFAULT '',
+                        dataStatus TEXT NOT NULL DEFAULT 'community',
+                        source TEXT NOT NULL DEFAULT '',
+                        verifiedAt TEXT,
+                        PRIMARY KEY(id)
                     )
                 """.trimIndent())
             }

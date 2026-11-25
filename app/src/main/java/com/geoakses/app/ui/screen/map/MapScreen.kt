@@ -1,20 +1,20 @@
 package com.geoakses.app.ui.screen.map
 
 import android.Manifest
-import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -22,20 +22,20 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.geoakses.app.data.model.Bus
+import com.geoakses.app.data.model.FacilityCategory
+import com.geoakses.app.data.model.PublicFacility
 import com.geoakses.app.data.model.Stop
 import com.geoakses.app.ui.viewmodel.MapViewModel
 import com.geoakses.app.util.Constants
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.android.gms.location.LocationServices
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.Marker
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.foundation.shape.CircleShape
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.google.android.gms.location.LocationServices
 import java.lang.SecurityException
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -115,8 +115,8 @@ fun MapScreen(
             update = { mapView ->
                 mapView.overlays.clear()
                 val selectedRoute = uiState.routes.firstOrNull { it.id == uiState.selectedRouteId }
-
                 val operatorRoutes = uiState.routes.filter { route -> route.operator.equals(uiState.selectedLayer, ignoreCase = true) }
+
                 if (uiState.showStops) {
                     uiState.stops.filter { stop ->
                         val routeMatches = selectedRoute == null || stop.corridorsServed.contains(selectedRoute.code, ignoreCase = true)
@@ -159,6 +159,27 @@ fun MapScreen(
                         mapView.overlays.add(marker)
                     }
                 }
+
+                if (uiState.showFacilities) {
+                    uiState.facilities.filter { facility ->
+                        val catMatches = uiState.selectedFacilityCategory == FacilityCategory.ALL ||
+                            facility.category.equals(uiState.selectedFacilityCategory, ignoreCase = true)
+                        facility.latitude in -90.0..90.0 && facility.longitude in -180.0..180.0 && catMatches
+                    }.forEach { facility ->
+                        val marker = Marker(mapView).apply {
+                            position = GeoPoint(facility.latitude, facility.longitude)
+                            title = "${facility.name} (${facility.category})"
+                            snippet = facility.address
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                            setOnMarkerClickListener { _, _ ->
+                                viewModel.selectFacility(facility)
+                                true
+                            }
+                        }
+                        mapView.overlays.add(marker)
+                    }
+                }
+
                 val latitude = uiState.userLatitude
                 val longitude = uiState.userLongitude
                 if (latitude != null && longitude != null) {
@@ -200,16 +221,27 @@ fun MapScreen(
                         }
                         Column {
                             Text("Peta Bandung", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text("OpenStreetMap · halte dan bus sesuai data tersedia", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Fasilitas umum, halte, dan koridor transportasi publik", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     Spacer(Modifier.height(8.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(listOf("Semua", "TMB", "MJT", "Halte", "Bus")) { layer ->
+                        items(listOf("Semua", "Fasilitas", "TMB", "MJT", "Halte", "Bus")) { layer ->
                             FilterChip(
                                 selected = uiState.selectedLayer == layer,
                                 onClick = { viewModel.selectLayer(layer) },
                                 label = { Text(layer) }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text("Kategori Fasilitas Umum", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(FacilityCategory.ALL_CATEGORIES) { cat ->
+                            FilterChip(
+                                selected = uiState.selectedFacilityCategory == cat,
+                                onClick = { viewModel.selectFacilityCategory(cat) },
+                                label = { Text(cat) }
                             )
                         }
                     }
@@ -235,7 +267,6 @@ fun MapScreen(
             }
         }
 
-        // Detail dialog/card for bus
         locationError?.let { message ->
             Text(
                 message,
@@ -274,6 +305,86 @@ fun MapScreen(
                     .align(Alignment.BottomCenter)
                     .padding(16.dp)
             )
+        }
+        uiState.selectedFacility?.let { facility ->
+            val nearestStop = remember(facility, uiState.stops) {
+                uiState.stops
+                    .filter { it.latitude in -90.0..90.0 && it.longitude in -180.0..180.0 }
+                    .minByOrNull { stop ->
+                        val rad = Math.PI / 180.0
+                        val dLat = (stop.latitude - facility.latitude) * rad
+                        val dLon = (stop.longitude - facility.longitude) * rad
+                        val a = kotlin.math.sin(dLat / 2).let { it * it } +
+                            kotlin.math.cos(facility.latitude * rad) * kotlin.math.cos(stop.latitude * rad) *
+                            kotlin.math.sin(dLon / 2).let { it * it }
+                        6_371_000.0 * 2 * kotlin.math.atan2(kotlin.math.sqrt(a), kotlin.math.sqrt(1 - a))
+                    }
+            }
+            FacilityInfoCard(
+                facility = facility,
+                nearestStop = nearestStop,
+                onDismiss = { viewModel.selectFacility(null) },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 80.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun FacilityInfoCard(
+    facility: PublicFacility,
+    nearestStop: Stop?,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = facility.category.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(facility.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, contentDescription = "Tutup")
+                }
+            }
+            if (facility.address.isNotBlank()) {
+                Text(facility.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text("Jam Operasional: ${facility.operatingHours}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (facility.description.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(facility.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Text("Rekomendasi Transportasi Publik", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            if (facility.accessibilityInfo.isNotBlank()) {
+                Text(facility.accessibilityInfo, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+            }
+            if (nearestStop != null) {
+                Text("• Halte Terdekat: ${nearestStop.name}", style = MaterialTheme.typography.bodySmall)
+                if (nearestStop.corridorsServed.isNotBlank()) {
+                    Text("• Koridor Melintas: ${nearestStop.corridorsServed}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                }
+            } else if (facility.accessibilityInfo.isBlank()) {
+                Text("Gunakan koridor TMB / MJT terdekat menuju kawasan ${facility.address.ifBlank { facility.name }}.", style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
@@ -353,4 +464,3 @@ private fun StopInfoCard(
         }
     }
 }
-

@@ -3,8 +3,11 @@ package com.geoakses.app.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.geoakses.app.data.model.Bus
+import com.geoakses.app.data.model.FacilityCategory
+import com.geoakses.app.data.model.PublicFacility
 import com.geoakses.app.data.model.Route
 import com.geoakses.app.data.model.Stop
+import com.geoakses.app.data.repository.FacilityRepository
 import com.geoakses.app.data.repository.TransitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +23,8 @@ data class HomeUiState(
     val stops: List<Stop> = emptyList(),
     val nearbyStops: List<Stop> = emptyList(),
     val liveBuses: List<Bus> = emptyList(),
+    val facilities: List<PublicFacility> = emptyList(),
+    val selectedFacilityCategory: String = FacilityCategory.ALL,
     val error: String? = null,
     val searchQuery: String = "",
     val locationLabel: String = "Gunakan lokasi atau cari halte secara manual",
@@ -29,7 +34,8 @@ data class HomeUiState(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: TransitRepository
+    private val repository: TransitRepository,
+    private val facilityRepository: FacilityRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -50,18 +56,25 @@ class HomeViewModel @Inject constructor(
                 }
         }
         viewModelScope.launch {
+            facilityRepository.getAllFacilities()
+                .catch { e -> _uiState.update { it.copy(error = e.message) } }
+                .collect { facilities ->
+                    _uiState.update { it.copy(facilities = facilities) }
+                }
+        }
+        viewModelScope.launch {
             repository.getStops().collect { result ->
                 result.onSuccess { stops ->
-                        _uiState.update { state ->
-                            val latitude = state.latitude
-                            val longitude = state.longitude
-                            state.copy(
-                                stops = stops,
-                                nearbyStops = if (latitude != null && longitude != null) {
-                                    closestStops(stops, latitude, longitude)
-                                } else emptyList()
-                            )
-                        }
+                    _uiState.update { state ->
+                        val latitude = state.latitude
+                        val longitude = state.longitude
+                        state.copy(
+                            stops = stops,
+                            nearbyStops = if (latitude != null && longitude != null) {
+                                closestStops(stops, latitude, longitude)
+                            } else emptyList()
+                        )
+                    }
                 }
                 result.onFailure { error -> _uiState.update { it.copy(error = error.message) } }
             }
@@ -76,6 +89,10 @@ class HomeViewModel @Inject constructor(
                     result.onFailure { error -> _uiState.update { it.copy(error = error.message) } }
                 }
         }
+    }
+
+    fun selectFacilityCategory(category: String) {
+        _uiState.update { it.copy(selectedFacilityCategory = category) }
     }
 
     fun onSearchQueryChange(query: String) {
